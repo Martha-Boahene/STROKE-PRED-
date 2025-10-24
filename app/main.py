@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 
 # --- Load trained model ---
-MODEL_PATH = Path("../models/log_reg_model.joblib")
+MODEL_PATH = Path("models/log_reg_model.joblib")
 MODEL = joblib.load(MODEL_PATH)
 
 # --- Input validation ---
