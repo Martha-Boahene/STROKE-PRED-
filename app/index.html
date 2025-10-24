@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stroke Risk Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen py-10">
+    <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-4">
+            🩺 Stroke Risk Predictor
+        </h1>
+        <p class="text-center text-gray-600 mb-6">
+            Enter patient details below to estimate stroke probability.
+        </p>
+
+        <!-- --- FORM --- -->
+        <form id="predictForm" class="space-y-4">
+            <div>
+                <label class="block text-gray-700">Age</label>
+                <input type="number" name="age" class="w-full border rounded-md p-2" min="0" max="120" required>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Gender</label>
+                <select name="gender" class="w-full border rounded-md p-2">
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Married</label>
+                <select name="ever_married" class="w-full border rounded-md p-2">
+                    <option>Yes</option>
+                    <option>No</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Work Type</label>
+                <select name="work_type" class="w-full border rounded-md p-2">
+                    <option>Private</option>
+                    <option>Self-employed</option>
+                    <option>Govt_job</option>
+                    <option>children</option>
+                    <option>Never_worked</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Residence Type</label>
+                <select name="Residence_type" class="w-full border rounded-md p-2">
+                    <option>Urban</option>
+                    <option>Rural</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Average Glucose Level</label>
+                <input type="number" name="avg_glucose_level" step="0.1" class="w-full border rounded-md p-2" required>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">BMI</label>
+                <input type="number" name="bmi" step="0.1" class="w-full border rounded-md p-2" required>
+            </div>
+
+            <div>
+                <label class="block text-gray-700">Smoking Status</label>
+                <select name="smoking_status" class="w-full border rounded-md p-2">
+                    <option>formerly smoked</option>
+                    <option>never smoked</option>
+                    <option>smokes</option>
+                    <option>Unknown</option>
+                </select>
+            </div>
+
+            <div class="flex justify-between">
+                <div>
+                    <label class="block text-gray-700">Hypertension</label>
+                    <select name="hypertension" class="border rounded-md p-2">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700">Heart Disease</label>
+                    <select name="heart_disease" class="border rounded-md p-2">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white rounded-md py-2 mt-4 hover:bg-blue-700">
+                Predict Stroke Probability
+            </button>
+        </form>
+
+        <!-- --- RESULT --- -->
+        <div id="result" class="mt-6 text-center text-lg font-semibold text-gray-800"></div>
+
+        <!-- --- RISK GAUGE --- -->
+        <div id="gauge" class="w-full bg-gray-200 h-4 rounded-full mt-4 overflow-hidden hidden">
+            <div id="gaugeFill" class="h-4 transition-all duration-700"></div>
+        </div>
+        <p id="riskLabel" class="text-center text-sm font-medium mt-2"></p>
+    </div>
+
+    <!-- --- SCRIPT --- -->
+    <script>
+        document.getElementById("predictForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const payload = Object.fromEntries(formData.entries());
+            
+            // convert numeric fields
+            payload.age = parseFloat(payload.age);
+            payload.avg_glucose_level = parseFloat(payload.avg_glucose_level);
+            payload.bmi = parseFloat(payload.bmi);
+            payload.hypertension = parseInt(payload.hypertension);
+            payload.heart_disease = parseInt(payload.heart_disease);
+
+            const res = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            const resultDiv = document.getElementById("result");
+            const gauge = document.getElementById("gauge");
+            const fill = document.getElementById("gaugeFill");
+            const label = document.getElementById("riskLabel");
+
+            if (res.ok) {
+                const prob = (data.stroke_probability * 100).toFixed(2);
+                resultDiv.innerHTML = `🧩 Predicted Stroke Probability: <span class="text-blue-600">${prob}%</span>`;
+                
+                gauge.classList.remove("hidden");
+                fill.style.width = `${prob}%`;
+
+                // Risk color
+                let color = "bg-green-500", text = "Low Risk";
+                if (prob >= 50) {
+                    color = "bg-red-500";
+                    text = "High Risk ⚠️";
+                } else if (prob >= 20) {
+                    color = "bg-yellow-400";
+                    text = "Moderate Risk ⚠️";
+                }
+
+                fill.className = `h-4 ${color} transition-all duration-700`;
+                label.textContent = text;
+            } else {
+                resultDiv.innerHTML = `❌ Error: ${data.detail}`;
+                gauge.classList.add("hidden");
+                label.textContent = "";
+            }
+        });
+    </script>
+</body>
+</html>
